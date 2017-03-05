@@ -14,6 +14,8 @@ Here is a sample invocation:
 python markovmaker.py -t sample_text.txt
 ```
 
+Text should be in a .txt file and it should be generally organized into paragraphs with newlines separating them.
+
 To see a list of all flags or arguments just use the -h flag
 
 ## ToDo:

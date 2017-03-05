@@ -77,7 +77,7 @@ def text_analyzer(file_name):
 
 	return tuple(paragraphs_list)
 
-def create_markov_matrix(input_text):
+def order_one_create_markov_matrix(input_text):
 	"""
 	This creates a matrix/dictionary where each word appearing in the text is a key.
 	The value is another dictionary where each key is a word following the word, and the value
@@ -104,6 +104,27 @@ def create_markov_matrix(input_text):
 
 	return markov_matrix
 
+def order_two_create_markov_matrix(input_text):
+	markov_matrix = {}
+	for unit in input_text:
+		for count, token in enumerate(unit):
+			if count == 0:
+				pass
+			else:
+				try:
+					to_test = (token, unit[count+1])
+					if to_test not in markov_matrix:
+						markov_matrix[to_test] = {}
+
+					if unit[count+2] not in markov_matrix[to_test]:
+						markov_matrix[to_test][unit[count+2]] = 1
+					else:
+						markov_matrix[to_test][unit[count+2]] += 1
+				except IndexError:
+					pass
+
+	return markov_matrix
+
 def choose_next(choices):
 	choice_list = []
 	for thing in choices:
@@ -111,15 +132,24 @@ def choose_next(choices):
 
 	return random.choice(choice_list)
 
-def create_text(parameter, matrix):
+def create_text(parameter, unigrams, bigrams):
 	"""
 	A text creator. Returns a unit of text as indicated by the parameter
 	"""
 
-	end_of_file_terms = (".", "<p>", "!")
+	end_of_file_terms = (".", "<p>", "!", "?")
 	chosen = False
 	while chosen == False:
-		first_word = choose_next(matrix["."])
+		# make a list of seed words for the first word
+		# you need to streamline this once going to third order
+		final_dict = unigrams["."]
+		for entity in unigrams["<p>"]:
+			if entity in final_dict:
+				final_dict[entity] += unigrams["<p>"][entity]
+			else:
+				final_dict[entity] = unigrams["<p>"][entity]
+
+		first_word = choose_next(final_dict)
 		if first_word != '<p>':
 			chosen = True
 
@@ -129,12 +159,37 @@ def create_text(parameter, matrix):
 	end_of_file = False
 	seed_word = first_word
 
+	# now we do the second word
+	seed_words = unigrams[seed_word]
+	for word_pair in (("<p>", first_word), (".", first_word)):
+		if word_pair in bigrams:
+			for thing in bigrams[word_pair]:
+				# bigrams are weighted by 4
+				seed_words[thing] += (bigrams[word_pair][thing] * 4)
+				
+	sent.append(choose_next(seed_words))
+
+	last_word = seed_word
+	seed_word = sent[1]
+
+	# the rest of the sentence
 	while end_of_file == False:
-		next_word = choose_next(matrix[seed_word])
+
+		final_dict = unigrams[seed_word]
+		bigram = (last_word, seed_word)
+
+		if bigram in bigrams:
+			for word in bigrams[bigram]:
+				final_dict[word] += (bigrams[bigram][word] * 4)
+
+		next_word = choose_next(final_dict)
 		sent.append(next_word)
+
+	
 		if next_word in end_of_file_terms:
 			end_of_file = True
 		else:
+			last_word = seed_word
 			seed_word = next_word
 
 	return sent
@@ -152,10 +207,11 @@ def main(args):
 		print "Sorry, I haven't gotten to that yet."
 		quit()
 
-	markov_matrix = create_markov_matrix(to_markov)
+	markov_matrix_one = order_one_create_markov_matrix(to_markov)
+	markov_matrix_two = order_two_create_markov_matrix(to_markov)
 	end_parameter = "s"
-	markoved =  create_text(end_parameter, markov_matrix)
-	print " ".join(markoved)
+	markoved =  create_text(end_parameter, markov_matrix_one, markov_matrix_two)
+	print ' '.join(markoved)
 
 
 
