@@ -21,6 +21,7 @@ In rough order that I will attack them
 * normalization of tokens
 * quotes handling
 * word level models
+* phrase-level models
 * smoothing
 * saving of model
 * folder import
