@@ -59,8 +59,6 @@ def text_analyzer(file_name):
 	print "Reading file.\n"
 	with codecs.open(file_name, 'r', 'utf-8') as open_text:
 	
-		print "file opened\n"
-
 		paragraphs_list = []
 
 		for line in open_text:
@@ -83,6 +81,8 @@ def order_one_create_markov_matrix(input_text):
 	The value is another dictionary where each key is a word following the word, and the value
 	is the number of times it occurs following.
 	"""
+	print 'Creating order one matrix\n'
+
 	markov_matrix = {}
 
 	# going through each paragraph/word
@@ -105,6 +105,7 @@ def order_one_create_markov_matrix(input_text):
 	return markov_matrix
 
 def order_two_create_markov_matrix(input_text):
+	print 'Creating order two matrix\n'
 	markov_matrix = {}
 	for unit in input_text:
 		for count, token in enumerate(unit):
@@ -125,6 +126,31 @@ def order_two_create_markov_matrix(input_text):
 
 	return markov_matrix
 
+def order_three_create_markov_matrix(input_text):
+	print 'Creating order three matrix\n'
+
+	markov_matrix = {}
+	for unit in input_text:
+		for count, token in enumerate(unit):
+			if count == 0 or count == 1:
+				pass
+			else:
+				try:
+					to_test = (token, unit[count+1], unit[count+2])
+
+					# this should be its own function, in all examples
+					if to_test not in markov_matrix:
+						markov_matrix[to_test] = {}
+
+					if unit[count+3] not in markov_matrix[to_test]:
+						markov_matrix[to_test][unit[count+3]] = 1
+					else:
+						markov_matrix[to_test][unit[count+3]] += 1
+				except IndexError:
+					pass
+
+	return markov_matrix
+
 def choose_next(choices):
 	choice_list = []
 	for thing in choices:
@@ -132,9 +158,10 @@ def choose_next(choices):
 
 	return random.choice(choice_list)
 
-def create_text(parameter, unigrams, bigrams):
+def create_text(parameter, unigrams, bigrams, trigrams):
 	"""
 	A text creator. Returns a unit of text as indicated by the parameter
+	It is much larger than I thought it would be, could use some cleaning up
 	"""
 
 	end_of_file_terms = (".", "<p>", "!", "?")
@@ -169,18 +196,46 @@ def create_text(parameter, unigrams, bigrams):
 				
 	sent.append(choose_next(seed_words))
 
+	# advance
 	last_word = seed_word
 	seed_word = sent[1]
+
+	# third word
+	seed_words = unigrams[seed_word]
+	bigram = (last_word, seed_word)
+
+	# weight for bigrams
+	for word in bigrams[bigram]:
+		seed_words[word] += (bigrams[bigram][word] * 4)
+
+	# weight for trigrams
+	trigrams_to_test = (("<p>", last_word, seed_word), (".", last_word, seed_word))
+	for trigram in trigrams_to_test:
+		if trigram in trigrams:
+			for series in trigrams[trigram]:
+				seed_words[word] += (trigrams[trigram][series] * 16)
+
+	sent.append(choose_next(seed_words))
+
+	third_word = sent[0] 
+	second_word = sent[1]
+	seed_word = sent[2]
+	
 
 	# the rest of the sentence
 	while end_of_file == False:
 
 		final_dict = unigrams[seed_word]
-		bigram = (last_word, seed_word)
+		bigram = (second_word, seed_word)
+		trigram = (third_word, second_word, seed_word)
 
 		if bigram in bigrams:
 			for word in bigrams[bigram]:
 				final_dict[word] += (bigrams[bigram][word] * 4)
+
+		if trigram in trigrams:
+			for word in trigrams[trigram]:
+				final_dict[word] += (trigrams[trigram][word] * 16)
 
 		next_word = choose_next(final_dict)
 		sent.append(next_word)
@@ -189,7 +244,8 @@ def create_text(parameter, unigrams, bigrams):
 		if next_word in end_of_file_terms:
 			end_of_file = True
 		else:
-			last_word = seed_word
+			third_word = second_word
+			second_word = seed_word 
 			seed_word = next_word
 
 	return sent
@@ -209,8 +265,9 @@ def main(args):
 
 	markov_matrix_one = order_one_create_markov_matrix(to_markov)
 	markov_matrix_two = order_two_create_markov_matrix(to_markov)
+	markov_matrix_three = order_three_create_markov_matrix(to_markov)
 	end_parameter = "s"
-	markoved =  create_text(end_parameter, markov_matrix_one, markov_matrix_two)
+	markoved =  create_text(end_parameter, markov_matrix_one, markov_matrix_two, markov_matrix_three)
 	print ' '.join(markoved)
 
 
