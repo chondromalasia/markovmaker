@@ -31,6 +31,28 @@ def get_arguments():
 	
 	return parser.parse_args()
 
+def normalizer(to_normalize):
+	"""
+	Normalizes text. Right now we're going to deal with contractions and lowercasing
+	This may be optional depending on the size of the corpus
+	"""
+
+	for count, word in enumerate(to_normalize):
+		if "'" in word:
+			if word == "n't":
+				to_normalize[count] = "not"
+			elif word == "'re":
+				to_normalize[count] = "are"
+			elif word == "'ll":
+				to_normalize[count] = "will"
+			elif word == "'ve":
+				to_normalize[count] = "have"
+			elif word == "'m":
+				to_normalize[count] = "am"
+		else:
+			to_normalize[count] = word.lower()
+
+	return to_normalize
 
 def text_tokenizer(text_line):
 	"""
@@ -49,6 +71,8 @@ def text_tokenizer(text_line):
 		else:
 			final_list = final_list + word_tokenize(sentence)
 	final_list.append("<p>")
+
+	final_list = normalizer(final_list)
 
 	return tuple(final_list)
 
@@ -250,6 +274,29 @@ def create_text(parameter, unigrams, bigrams, trigrams):
 
 	return sent
 		
+def text_prettifier(to_prettify):
+	"""
+	Formats strings to be produced: capitalize first letter, eliminate spaces before commas
+	"""
+	
+	punctuation = (",", "'", '"', ".", "?", "...")
+
+	final_string = ""
+	for count, word in enumerate(to_prettify):
+		if count == 0:
+			word = word.capitalize()
+
+		try:
+			if to_prettify[count+1] in punctuation:
+				final_string = final_string+word
+			else:
+				final_string = final_string + word + " "
+
+		except IndexError:
+			# just add the final word
+			final_string = final_string + word
+
+	return final_string
 		
 
 def main(args):
@@ -268,7 +315,7 @@ def main(args):
 	markov_matrix_three = order_three_create_markov_matrix(to_markov)
 	end_parameter = "s"
 	markoved =  create_text(end_parameter, markov_matrix_one, markov_matrix_two, markov_matrix_three)
-	print ' '.join(markoved)
+	print(text_prettifier(markoved))
 
 
 
