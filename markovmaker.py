@@ -133,20 +133,17 @@ def order_two_create_markov_matrix(input_text):
 	markov_matrix = {}
 	for unit in input_text:
 		for count, token in enumerate(unit):
-			if count == 0:
-				pass
-			else:
-				try:
-					to_test = (token, unit[count+1])
-					if to_test not in markov_matrix:
-						markov_matrix[to_test] = {}
+			try:
+				to_test = (token, unit[count+1])
+				if to_test not in markov_matrix:
+					markov_matrix[to_test] = {}
 
-					if unit[count+2] not in markov_matrix[to_test]:
-						markov_matrix[to_test][unit[count+2]] = 1
-					else:
-						markov_matrix[to_test][unit[count+2]] += 1
-				except IndexError:
-					pass
+				if unit[count+2] not in markov_matrix[to_test]:
+					markov_matrix[to_test][unit[count+2]] = 1
+				else:
+					markov_matrix[to_test][unit[count+2]] += 1
+			except IndexError:
+				pass
 
 	return markov_matrix
 
@@ -156,33 +153,94 @@ def order_three_create_markov_matrix(input_text):
 	markov_matrix = {}
 	for unit in input_text:
 		for count, token in enumerate(unit):
-			if count == 0 or count == 1:
+			try:
+				to_test = (token, unit[count+1], unit[count+2])
+
+				# this should be its own function, in all examples
+				if to_test not in markov_matrix:
+					markov_matrix[to_test] = {}
+
+				if unit[count+3] not in markov_matrix[to_test]:
+					markov_matrix[to_test][unit[count+3]] = 1
+				else:
+					markov_matrix[to_test][unit[count+3]] += 1
+			except IndexError:
 				pass
-			else:
-				try:
-					to_test = (token, unit[count+1], unit[count+2])
-
-					# this should be its own function, in all examples
-					if to_test not in markov_matrix:
-						markov_matrix[to_test] = {}
-
-					if unit[count+3] not in markov_matrix[to_test]:
-						markov_matrix[to_test][unit[count+3]] = 1
-					else:
-						markov_matrix[to_test][unit[count+3]] += 1
-				except IndexError:
-					pass
 
 	return markov_matrix
 
+def order_four_create_markov_matrix(input_text):
+	print 'Creating order four matrix\n'
+
+	markov_matrix = {}
+
+	for unit in input_text:
+		for count, token in enumerate(unit):
+
+			try:
+				to_test = (token, unit[count+1], unit[count+2], unit[count+3])
+
+				# creates the new 4-gram
+				if to_test not in markov_matrix:
+					markov_matrix[to_test] = {}
+
+				# adds the next letter, if it's not there
+				if unit[count+4] not in markov_matrix[to_test]:
+					markov_matrix[to_test][unit[count+4]] = 1
+				else:
+					markov_matrix[to_test][unit[count+4]] += 1
+			except IndexError:
+				pass
+
+
+	return markov_matrix
+
+def order_five_create_markov_matrix(input_text):
+	print 'Creating order five matrix\n'
+
+	markov_matrix = {}
+
+	for unit in input_text:
+		for count, token in enumerate(unit):
+
+			try:
+				to_test = (token, unit[count+1], unit[count+2], unit[count+3], unit[count+4])
+
+				if to_test not in markov_matrix:
+					markov_matrix[to_test] = {}
+
+				if unit[count+5] not in markov_matrix[to_test]:
+					markov_matrix[to_test][unit[count+5]] = 1
+				else:
+					markov_matrix[to_test][unit[count+5]] +=1
+
+			except IndexError:
+				pass
+
+	return markov_matrix
+
+def weight_ngram(the_word_list, the_ngrams, the_ngram):
+	weight = 4 ** (len(the_ngram) - 1)
+	if the_ngram in the_ngrams:
+		for word in the_ngrams[the_ngram]:
+			the_word_list[word] += (the_ngrams[the_ngram][word] * weight)
+
+	return the_word_list
+
+		
 def choose_next(choices):
+	"""
+	The way it makes a list where the word appears a weighted number of times, to reflect
+	its weighting
+	It comes into here weighted based on n-grams
+	"""
 	choice_list = []
 	for thing in choices:
-		choice_list = choice_list + [thing] * choices[thing]
+		choice_list = choice_list + [thing] * (choices[thing])
 
 	return random.choice(choice_list)
 
-def create_text(parameter, unigrams, bigrams, trigrams):
+def create_text(parameter, unigrams, bigrams, trigrams, fourgrams, fivegrams):
 	"""
 	A text creator. Returns a unit of text as indicated by the parameter
 	It is much larger than I thought it would be, could use some cleaning up
@@ -229,22 +287,72 @@ def create_text(parameter, unigrams, bigrams, trigrams):
 	bigram = (last_word, seed_word)
 
 	# weight for bigrams
-	for word in bigrams[bigram]:
-		seed_words[word] += (bigrams[bigram][word] * 4)
-
+	seed_words = weight_ngram(seed_words, bigrams, bigram)
+	
 	# weight for trigrams
 	trigrams_to_test = (("<p>", last_word, seed_word), (".", last_word, seed_word))
 	for trigram in trigrams_to_test:
 		if trigram in trigrams:
 			for series in trigrams[trigram]:
-				seed_words[word] += (trigrams[trigram][series] * 16)
+				seed_words[series] += (trigrams[trigram][series] * 16)
 
 	sent.append(choose_next(seed_words))
 
+
+	# advance
 	third_word = sent[0] 
 	second_word = sent[1]
 	seed_word = sent[2]
+
+	# fourth word
+	seed_words = unigrams[seed_word]
+	bigram = (second_word, seed_word)
 	
+	# weighted bigrams
+	seed_words = weight_ngram(seed_words, bigrams, bigram)
+
+	# weighted trigrams
+	trigram_to_test = (third_word, second_word, seed_word)
+	seed_words = weight_ngram(seed_words, trigrams, trigram_to_test)
+
+	# weighted 4grams
+	fourgrams_to_test = (("<p>", third_word, second_word, seed_word), 
+				(".", third_word, second_word, seed_word))
+	for fourgram in fourgrams_to_test:
+		if fourgram in fourgrams:
+			for word in fourgrams[fourgram]:
+				seed_words[word] += (fourgrams[fourgram][word] * 64)
+
+	sent.append(choose_next(seed_words))
+
+	# advance
+	fourth_word = sent[0]
+	third_word = sent[1]
+	second_word = sent[2]
+	seed_word = sent[3]
+
+	# fifth word
+	seed_words = unigrams[seed_word]
+	bigram = (second_word, seed_word)
+
+	seed_words = weight_ngram(seed_words, bigrams, bigram)
+	trigram = (third_word, second_word, seed_word)
+	seed_words = weight_ngram(seed_words, trigrams, trigram)
+
+	# weight 4 gram
+	fourgram = (fourth_word, third_word, second_word, seed_word)
+	seed_words = weight_ngram(seed_words, fourgrams, fourgram)
+
+	# weight 5 gram
+	fivegrams_to_test = (("<p>", fourth_word, third_word, second_word, seed_word),
+				(".", fourth_word, third_word, second_word, seed_word))
+
+	for fivegram in fivegrams_to_test:
+		if fivegram in fivegrams:
+			for word in fivegrams[fivegram]:
+				seed_words[word] += (fivegrams[fivegram][word] * 256)
+
+	sent.append(choose_next(seed_words))
 
 	# the rest of the sentence
 	while end_of_file == False:
@@ -252,6 +360,7 @@ def create_text(parameter, unigrams, bigrams, trigrams):
 		final_dict = unigrams[seed_word]
 		bigram = (second_word, seed_word)
 		trigram = (third_word, second_word, seed_word)
+		fourgram = (fourth_word, third_word, second_word, seed_word)
 
 		if bigram in bigrams:
 			for word in bigrams[bigram]:
@@ -260,6 +369,14 @@ def create_text(parameter, unigrams, bigrams, trigrams):
 		if trigram in trigrams:
 			for word in trigrams[trigram]:
 				final_dict[word] += (trigrams[trigram][word] * 16)
+
+		if fourgram in fourgrams:
+			for word in fourgrams[fourgram]:
+				final_dict[word] += (fourgrams[fourgram][word] * 64)
+
+		if fivegram in fivegrams:
+			for word in fivegrams[fivegram]:
+				final_dict[word] += (fivegrams[fivegram][word] * 256)
 
 		next_word = choose_next(final_dict)
 		sent.append(next_word)
@@ -313,8 +430,10 @@ def main(args):
 	markov_matrix_one = order_one_create_markov_matrix(to_markov)
 	markov_matrix_two = order_two_create_markov_matrix(to_markov)
 	markov_matrix_three = order_three_create_markov_matrix(to_markov)
+	markov_matrix_four = order_four_create_markov_matrix(to_markov)
+	markov_matrix_five = order_five_create_markov_matrix(to_markov)
 	end_parameter = "s"
-	markoved =  create_text(end_parameter, markov_matrix_one, markov_matrix_two, markov_matrix_three)
+	markoved =  create_text(end_parameter, markov_matrix_one, markov_matrix_two, markov_matrix_three, markov_matrix_four, markov_matrix_five)
 	print(text_prettifier(markoved))
 
 
